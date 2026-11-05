@@ -61,10 +61,10 @@ print(change.round(1))
 
 # 5-2 (선 그래프): 임금·외식물가·전체 물가·소비량을 월별로 한 그래프에 그린다.
 plt.figure(figsize=(12, 6))
-plt.plot(df_100.index, df_100['임금'], label='음식점 임금·급여(정액급여)', color='blue')
-plt.plot(df_100.index, df_100['외식물가'], label='외식물가(음식점·숙박)', color='orange')
-plt.plot(df_100.index, df_100['전체물가'], label='전체 물가(소비자물가 총지수)', color='green')
-plt.plot(df_100.index, df_100['소비량'], label='외식 소비량(계절조정지수)', color='gray', linestyle='--')
+plt.plot(df_100.index, df_100['임금'], label='음식점 임금·급여(정액급여)', color='blue', marker='o', markersize=3)
+plt.plot(df_100.index, df_100['외식물가'], label='외식물가(음식점·숙박)', color='orange', marker='o', markersize=3)
+plt.plot(df_100.index, df_100['전체물가'], label='전체 물가(소비자물가 총지수)', color='green', marker='o', markersize=3)
+plt.plot(df_100.index, df_100['소비량'], label='외식 소비량(계절조정지수)', color='gray', linestyle='--', marker='o', markersize=3)
 plt.axhline(100, color='black', linewidth=0.8)                       # 2022년 평균 기준선
 plt.axvspan(pd.Timestamp('2021-10-01'), pd.Timestamp('2023-03-31'),
             color='lightgray', alpha=0.5, label='코로나 회복기')    # 코로나 회복기 음영
@@ -74,4 +74,7 @@ plt.xlabel('연월')
 plt.ylabel('지수 (2022년 평균 = 100)')
 plt.legend()
 plt.grid(axis='y', alpha=0.3)
+plt.xlim(pd.Timestamp('2021-01-01'), pd.Timestamp('2025-12-01'))   # x축을 분석 기간(2021.01~2025.12)에 딱 맞춤
+ticks = list(pd.date_range('2021-01-01', '2025-07-01', freq='6MS')) + [pd.Timestamp('2025-12-01')]   # 6개월 간격 + 마지막 달
+plt.xticks(ticks, [t.strftime('%Y-%m') for t in ticks])
 plt.show()
