@@ -6,7 +6,7 @@
 #         외식물가가 오른 만큼 외식 소비량은 거의 같은 시기에 같은 비율로 줄어들 것이다.
 
 # [3. 자료수집]
-# 3-1 : 월별 소비자물가지수 2개 (2020.01~2022.12, 2023.01~2026.09) -> 외식물가(음식점·숙박), 전체 물가(총지수)
+# 3-1 : 지출목적별 소비자물가지수(품목포함, 2020=100) (전국, 2020.01~2025.12) -> 외식물가(11.1 음식 서비스), 전체 물가(0 총지수)
 # 3-2 : 산업/규모별 임금 및 근로시간 (2020.01~2025.12) -> 음식점 및 주점업, 전규모, 상용정액급여
 # 3-3 : 월별 산업별 서비스업생산지수 -> 음식점업 계절조정지수 (외식 소비량)
 import pandas as pd
@@ -15,17 +15,14 @@ import matplotlib.pyplot as plt
 plt.rc('font', family='Malgun Gothic')        # 윈도우 맑은고딕으로 변경
 plt.rcParams['axes.unicode_minus'] = False    # 음수 기호 깨짐 방지
 
-cpi1 = pd.read_csv('./limjunhee/CSV/월별소비자물가지수_2020년01월-2022년12월.csv', encoding='cp949')
-cpi2 = pd.read_csv('./limjunhee/CSV/월별소비자물가지수_2023년01월-2026년09월.csv', encoding='cp949')
+cpi = pd.read_csv('./limjunhee/CSV/지출목적별소비자물가지수.csv', encoding='cp949')
 wage = pd.read_csv('./limjunhee/CSV/산업_규모별_임금_및_근로시간_(2020.01-2025.12).csv', encoding='utf-8-sig', header=[0, 1])
 prod = pd.read_csv('./limjunhee/CSV/월별_산업별_서비스업생산지수.csv', encoding='cp949')
 
 
 # [4. 데이터 전처리]
-# 4-1 (물가): 대한민국 행만 남기고, 월 열('2020.01 월' 등)만 골라서 행/열을 뒤집는다(.T).
-cpi1 = cpi1[cpi1['국가'] == '대한민국'].set_index('항목').filter(like='월').T
-cpi2 = cpi2[cpi2['국가'] == '대한민국'].set_index('항목').filter(like='월').T
-cpi = pd.concat([cpi1, cpi2], axis=0)     # 두 기간을 위아래로 합치기
+# 4-1 (물가): 지출목적별 이름을 행 이름으로 두고, 월 열('2020.01 월' 등)만 골라서 행/열을 뒤집는다(.T).
+cpi = cpi.set_index('지출목적별').filter(like='월').T
 
 # 4-2 (임금): 첫 번째 행이 '음식점 및 주점업 / 전규모(1인이상)' -> 그중 '상용정액급여 (원)' 값만 꺼낸다.
 wage = wage.iloc[0].xs('상용정액급여 (원)', level=1)
@@ -41,8 +38,8 @@ prod.index = pd.to_datetime(prod.index.str.replace(' ', '').str[:7], format='%Y.
 
 df = pd.DataFrame({
     '임금': wage,
-    '외식물가': cpi['음식점·숙박'],
-    '전체물가': cpi['총지수'],
+    '외식물가': cpi['11.1 음식 서비스'],
+    '전체물가': cpi['0 총지수'],
     '소비량': prod,
 }).astype(float)
 df = df.loc['2021-01':'2025-12']          # 분석 기간 2021~2025
@@ -62,7 +59,7 @@ print(change.round(1))
 # 5-2 (선 그래프): 임금·외식물가·전체 물가·소비량을 월별로 한 그래프에 그린다.
 plt.figure(figsize=(12, 6))
 plt.plot(df_100.index, df_100['임금'], label='음식점 임금·급여(정액급여)', color='blue', marker='o', markersize=3)
-plt.plot(df_100.index, df_100['외식물가'], label='외식물가(음식점·숙박)', color='orange', marker='o', markersize=3)
+plt.plot(df_100.index, df_100['외식물가'], label='외식물가(음식 서비스)', color='orange', marker='o', markersize=3)
 plt.plot(df_100.index, df_100['전체물가'], label='전체 물가(소비자물가 총지수)', color='green', marker='o', markersize=3)
 plt.plot(df_100.index, df_100['소비량'], label='외식 소비량(계절조정지수)', color='gray', linestyle='--', marker='o', markersize=3)
 plt.axhline(100, color='black', linewidth=0.8)                       # 2022년 평균 기준선
