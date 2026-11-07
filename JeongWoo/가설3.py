@@ -72,7 +72,7 @@ plot.set_axis_labels('', '')
 plot.set_titles('{col_name}년')
 # 각 패널 대신 그림 전체에 공통 축 제목을 한 번만 표시합니다.
 plot.fig.subplots_adjust(left=.12, bottom=.12, top=.86, right=.85, hspace=.22, wspace=.12)
-plot.fig.supxlabel('전통시장 내 비프랜차이즈 점포수 전년 동분기 증감률 (%)', y=.035, fontsize=12)
+plot.fig.supxlabel('전통시장 점포수 전년 동분기 증감률 (%)', y=.035, fontsize=12)
 plot.fig.supylabel('전체 상권 프랜차이즈 전년 동분기 증가율 (%)', x=.025, fontsize=12)
 plot.fig.suptitle('가설 3 | 연도별 유동인구 집단 관계 (2021~2025년 자료)\n2021년은 전년도 자료가 없어 변화율 분석 제외', y=.98, fontsize=15)
 plot.fig.savefig(output / '가설3_유동인구별_관계.png', dpi=180, bbox_inches='tight')

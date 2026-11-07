@@ -5,7 +5,7 @@ import numpy as np
 from pathlib import Path
 
 # 가설 2: 전통시장 점포 감소율과 전체 상권 프랜차이즈 증가율 비교.
-# 전통시장은 점포_수(비프랜차이즈), 프랜차이즈는 전체 상권에서 집계합니다.
+# 전통시장은 점포_수, 프랜차이즈는 전체 상권에서 집계합니다.
 # 관광특구는 다른 상권과 공간이 겹칠 수 있어 중복 제거된 고유 점포 합계는 아닙니다.
 sns.set_theme(font='Malgun Gothic', style='whitegrid', rc={'axes.unicode_minus': False})
 folder = Path(__file__).resolve().parent
@@ -25,7 +25,7 @@ assert not store[['점포_수', '프랜차이즈_점포_수']].isna().any().any(
 
 store = store[store['기준_년분기_코드'].between(20211, 20254)]
 group = ['자치구_코드', '자치구_코드_명', '기준_년분기_코드']
-# 시장_점포수 관련 파생 열은 모두 전통시장 내 비프랜차이즈 점포 기준입니다.
+# 시장_점포수 관련 파생 열은 모두 전통시장 점포 기준입니다.
 market = store[store['상권_구분_코드'] == 'R'].groupby(group)['점포_수'].sum(min_count=1).rename('시장_점포수')
 franchise = store.groupby(group)['프랜차이즈_점포_수'].sum(min_count=1).rename('프랜차이즈_점포수')
 data = pd.concat([market, franchise], axis=1).reset_index()
@@ -69,8 +69,8 @@ for ax, year, color in zip(axes.flat, sorted(analysis['연도'].unique()), color
            xlabel='', ylabel='', xlim=(xmin-xpad, xmax+xpad), ylim=(ymin-ypad, ymax+ypad))
     ax.grid(alpha=.25)
     sns.despine(ax=ax)
-fig.suptitle('가설 2 | 전통시장 비프랜차이즈 감소와 전체 프랜차이즈 변화', fontsize=18, y=.98)
-fig.supxlabel('전통시장 내 비프랜차이즈 점포수 감소율 (%)   ← 증가  |  감소 →', y=.07, fontsize=12)
+fig.suptitle('가설 2 | 전통시장 감소와 전체 프랜차이즈 변화', fontsize=18, y=.98)
+fig.supxlabel('전통시장 내 점포수 감소율 (%)   ← 증가  |  감소 →', y=.07, fontsize=12)
 fig.supylabel('전체 상권 프랜차이즈 증가율 (%)', x=.015, fontsize=12)
 fig.text(.5, .025, '점 = 자치구·분기 · 전년 같은 분기 대비 · 직선 = 연도별 탐색 회귀선\n2021년은 전년도 자료가 없어 증감률 표시 제외 · 축 범위 동일 · 모든 유효 관측 포함',
          ha='center', fontsize=10, color='#555555')
@@ -86,11 +86,60 @@ trend.index = [f'{q // 10}Q{q % 10}' for q in trend.index]
 fig, axes = plt.subplots(2, 1, figsize=(13, 8), sharex=True)
 for ax, column in zip(axes, trend.columns):
     sns.lineplot(x=trend.index, y=trend[column], marker='o', ax=ax)
-    label = '전통시장 내 비프랜차이즈 점포수' if column == '시장_점포수' else '전체 상권 프랜차이즈 점포수'
+    label = '전통시장 점포수' if column == '시장_점포수' else '전체 상권 프랜차이즈 점포수'
     ax.set(ylabel=f'{label} (개)', xlabel='분기')
 axes[1].tick_params(axis='x', rotation=45)
 fig.suptitle('서울 전체 점포수 추이 | 2021~2025년 20개 분기')
 plt.tight_layout()
 plt.savefig(output / '가설2_전체분기_점포수추이.png', dpi=180)
+plt.show()
+plt.close(fig)
+
+# 보완 1] 자치구·분기별 증감률 격차 (%p). 감소율이 아닌 증감률끼리 비교.
+data['증감률_격차'] = data['시장_증감률'] - data['프랜차이즈_증가율']
+data.to_csv(output / '가설2_자치구별_분석.csv', index=False, encoding='utf-8-sig')
+heatmap = data.pivot(index='자치구_코드_명', columns='기준_년분기_코드', values='증감률_격차')
+# 2021년 구조적 결측은 0 대체하지 않음. 비교 가능한 2022년 이후만 표시.
+heatmap = heatmap.dropna(axis=1, how='all').sort_index()
+heatmap.columns = [f'{q // 10}Q{q % 10}' for q in heatmap.columns]
+limit = np.nanmax(np.abs(heatmap.to_numpy()))
+if limit == 0:
+    limit = 1
+fig, ax = plt.subplots(figsize=(17, 11))
+sns.heatmap(heatmap, cmap='RdBu', center=0, vmin=-limit, vmax=limit,
+            annot=True, fmt='.1f', annot_kws={'fontsize': 8}, linewidths=.4,
+            cbar_kws={'label': '전통시장 증감률 - 프랜차이즈 증감률 (%p)'}, ax=ax)
+ax.set(title='가설 2 보완 | 자치구별 전년 동분기 증감률 격차', xlabel='분기', ylabel='자치구')
+ax.tick_params(axis='x', rotation=45)
+ax.tick_params(axis='y', rotation=0)
+fig.text(.5, .025, '음수(빨강): 전통시장의 상대적 변화가 더 나쁨 · 양수(파랑): 전체 프랜차이즈의 상대적 변화가 더 나쁨\n격차는 피해·인과효과가 아님 · 2021년은 전년도 자료 부재로 표시 제외', ha='center', fontsize=10)
+plt.tight_layout(rect=[0, .07, 1, 1])
+plt.savefig(output / '가설2_증감률격차_히트맵.png', dpi=180)
+plt.show()
+plt.close(fig)
+
+# 보완 2] 서울 합계를 먼저 계산한 뒤 각각 2021Q1=100으로 변환.
+totals = data.groupby('기준_년분기_코드')[['시장_점포수', '프랜차이즈_점포수']].sum(min_count=1).sort_index()
+assert (totals.loc[20211] > 0).all()
+index100 = totals.div(totals.loc[20211]) * 100
+index100.columns = ['전통시장', '전체 상권 프랜차이즈']
+index100.index = [f'{q // 10}Q{q % 10}' for q in index100.index]
+index100.index.name = '분기'
+index100.to_csv(output / '가설2_기준시점100_지수.csv', encoding='utf-8-sig')
+fig, ax = plt.subplots(figsize=(13, 6))
+for column, color in zip(index100.columns, ['#26779B', '#D77839']):
+    sns.lineplot(x=index100.index, y=index100[column], marker='o', label=column, color=color, ax=ax)
+    last = index100[column].iloc[-1]
+    ax.annotate(f'{last:.1f}', (len(index100)-1, last), xytext=(8, 0),
+                textcoords='offset points', color=color, va='center', fontweight='bold')
+ax.axhline(100, color='gray', linestyle='--', linewidth=1)
+ax.set(title='가설 2 보완 | 서울 전체 점포수의 상대적 변화 (2021Q1=100)',
+       xlabel='분기', ylabel='점포수 지수 (2021Q1=100)')
+ax.tick_params(axis='x', rotation=45)
+ax.margins(x=.05)
+ax.legend(title='집계 대상')
+fig.text(.5, .02, '각 집단의 기준 시점 대비 변화 비교 · 점포수의 절대 규모 비교가 아님 · 관광특구 등 상권 간 중복 가능성 있음', ha='center', fontsize=10)
+plt.tight_layout(rect=[0, .06, 1, 1])
+plt.savefig(output / '가설2_기준시점100_그래프.png', dpi=180)
 plt.show()
 plt.close(fig)
