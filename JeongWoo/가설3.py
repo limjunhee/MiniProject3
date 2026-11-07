@@ -78,3 +78,51 @@ plot.fig.suptitle('가설 3 | 연도별 유동인구 집단 관계 (2021~2025년
 plot.fig.savefig(output / '가설3_유동인구별_관계.png', dpi=180, bbox_inches='tight')
 plt.show()
 plt.close(plot.fig)
+
+# 보완 분석: 2021~2025년을 분리하여 자치구별 연간 평균 규모 비교.
+# 점포수는 재고 지표이므로 연내 분기를 합산하지 않고 4개 분기 평균 사용.
+assert data.groupby(['연도', '자치구_코드']).size().eq(4).all()
+assert not data[['유동인구', '시장_점포수', '프랜차이즈_점포수']].isna().any().any()
+average = data.groupby(['연도', '자치구_코드', '자치구_코드_명'])[
+    ['유동인구', '시장_점포수', '프랜차이즈_점포수']].mean().reset_index()
+for column in ['시장_점포수', '프랜차이즈_점포수']:
+    mean = average.groupby('연도')[column].transform('mean')
+    std = average.groupby('연도')[column].transform(lambda values: values.std(ddof=0))
+    average[column + '_z'] = (average[column] - mean) / std
+average.to_csv(output / '가설3_유동인구_점포규모_평균.csv', index=False, encoding='utf-8-sig')
+average['유동인구_백만'] = average['유동인구'] / 1_000_000
+fig, axes = plt.subplots(2, 3, figsize=(19, 11), sharex=True, sharey=True)
+for ax, year in zip(axes.flat, range(2021, 2026)):
+    subset = average[average['연도'] == year]
+    correlations = []
+    for column, color, label in [
+        ('시장_점포수_z', '#26779B', '전통시장 내 비프랜차이즈'),
+        ('프랜차이즈_점포수_z', '#D77839', '전체 상권 프랜차이즈')
+    ]:
+        sns.scatterplot(data=subset, x='유동인구_백만', y=column, color=color,
+                        label=label, s=40, alpha=.7, legend=False, ax=ax)
+        sns.regplot(data=subset, x='유동인구_백만', y=column, scatter=False,
+                    ci=None, color=color, ax=ax)
+        correlations.append(subset['유동인구'].corr(subset[column]))
+        for _, row in subset[subset[column].abs() >= 2].iterrows():
+            ax.annotate(row['자치구_코드_명'], (row['유동인구_백만'], row[column]),
+                        xytext=(3, 4), textcoords='offset points', color=color, fontsize=8)
+    ax.axhline(0, color='gray', linestyle='--', linewidth=.8)
+    ax.set(title=f'{year}년 | 시장 r={correlations[0]:.2f} · 프랜차이즈 r={correlations[1]:.2f}', xlabel='', ylabel='')
+    ax.grid(alpha=.3)
+    print(year, '평균 규모 상관계수 (시장/프랜차이즈):', correlations)
+axes[1, 2].axis('off')
+from matplotlib.lines import Line2D
+axes[1, 2].legend(handles=[
+    Line2D([0], [0], color='#26779B', marker='o', label='전통시장 내 비프랜차이즈'),
+    Line2D([0], [0], color='#D77839', marker='o', label='전체 상권 프랜차이즈')
+], loc='center', frameon=False, fontsize=12)
+fig.suptitle('연도별 유동인구와 점포 규모 | 2021~2025년', fontsize=20, y=.99)
+fig.supxlabel('자치구별 해당 연도 평균 유동인구 (백만 단위 · 상권별 지표 합계)', y=.07, fontsize=12)
+fig.supylabel('해당 연도 평균 점포수의 집단별 표준화 값 (z-score)', x=.015, fontsize=12)
+fig.text(.5, .02, '패널당 25개 자치구 × 2개 집단 · 연내 4분기 평균 · 연도·집단별 별도 표준화 · 동일 축 범위\n같은 높이가 같은 실제 점포수라는 뜻은 아님 · 탐색적 관계이며 지역 규모·상권 중복 영향과 인과관계에 주의', ha='center', fontsize=10)
+plt.tight_layout(rect=[.035, .11, 1, .95])
+plt.savefig(output / '가설3_유동인구_표준화점포수_산점도.png', dpi=180)
+plt.show()
+plt.close(fig)
+

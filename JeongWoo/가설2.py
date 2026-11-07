@@ -138,8 +138,38 @@ ax.set(title='가설 2 보완 | 서울 전체 점포수의 상대적 변화 (202
 ax.tick_params(axis='x', rotation=45)
 ax.margins(x=.05)
 ax.legend(title='집계 대상')
-fig.text(.5, .02, '각 집단의 기준 시점 대비 변화 비교 · 점포수의 절대 규모 비교가 아님 · 관광특구 등 상권 간 중복 가능성 있음', ha='center', fontsize=10)
+fig.text(.5, .02, '각 집단의 기준 시점 대비 변화 비교 · 점포수의 절대 규모 비교가 아님', ha='center', fontsize=10)
 plt.tight_layout(rect=[0, .06, 1, 1])
 plt.savefig(output / '가설2_기준시점100_그래프.png', dpi=180)
 plt.show()
 plt.close(fig)
+
+# 보완 3] 2022·2024년 연말 점포수 가로 막대 비교.
+# 분기 합산은 같은 점포를 반복 집계하므로 각 연도 4분기를 사용합니다.
+annual = data[data['기준_년분기_코드'].isin([20224, 20244])].copy()
+assert annual.groupby('연도').size().eq(25).all()
+# 2024년 시장 점포수 순으로 행을 고정하여 네 패널에서 같은 자치구를 비교.
+order = annual[annual['연도'] == 2024].sort_values('시장_점포수', ascending=False)['자치구_코드_명'].tolist()
+fig, axes = plt.subplots(2, 2, figsize=(17, 19), sharey=True)
+settings = [('시장_점포수', '전통시장 점포수', '#26779B'),
+            ('프랜차이즈_점포수', '전체 상권 프랜차이즈 점포수', '#D77839')]
+for row, year in enumerate([2022, 2024]):
+    subset = annual[annual['연도'] == year]
+    for col, (column, title, color) in enumerate(settings):
+        ax = axes[row, col]
+        sns.barplot(data=subset, x=column, y='자치구_코드_명', order=order, color=color, ax=ax)
+        ax.bar_label(ax.containers[0], labels=[f'{value:,.0f}' for value in subset.set_index('자치구_코드_명').loc[order, column]], padding=4, fontsize=9)
+        # 같은 지표의 2022·2024년 축 범위 통일. 두 집단의 규모 차이는 숫자로 확인.
+        ax.set_xlim(0, annual[column].max() * 1.18)
+        ax.set(title=f'{year}년 연말 | {title}', xlabel='점포수 (개)', ylabel='')
+        ax.tick_params(axis='y', labelleft=True, labelsize=10)
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda value, pos: f'{value:,.0f}'))
+        ax.grid(axis='y', visible=False)
+        sns.despine(ax=ax)
+fig.suptitle('자치구별 점포 규모 비교 | 2022년·2024년', fontsize=21, y=.99)
+fig.text(.5, .015, '각 연도 4분기 시점의 점포수 · 분기 합계가 아님 · 같은 자치구 순서와 지표별 동일 축 범위\n전통시장은 비프랜차이즈인 점포 기준', ha='center', fontsize=11)
+plt.tight_layout(rect=[0, .055, 1, .965], h_pad=3, w_pad=3)
+plt.savefig(output / '가설2_2022_2024_자치구별_가로막대.png', dpi=180)
+plt.show()
+plt.close(fig)
+
