@@ -2,7 +2,7 @@ import requests, xmltodict, html, time, os
 import pandas as pd
 
 failed = []                                   # 실패한 날짜 기록
-for year in range(2021, 2022):
+for year in range(2021, 2026):
     path = f'./limjunhee/Crawling_CSV/중앙일보_기사제목_{year}.csv'
     if os.path.exists(path):                  # 이미 저장된 연도는 건너뜀 (이어서 실행)
         print(year, '이미 있음, 건너뜀')
