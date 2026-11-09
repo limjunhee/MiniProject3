@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
 
 plt.rc( 'font' , family = 'Malgun Gothic' )
 plt.rcParams['axes.unicode_minus'] = False
@@ -60,49 +61,27 @@ print( "전체 r :" , r_all )
 print( "동네 r :" , r_dongne )
 print( "중심 r :" , r_center )
 
-# 가설1 통계 : 연도별·유형별 회귀계수, R2, t값
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score
-import numpy as np
-
-for y in years:
-    for nm in [ "전체" , "동네" , "중심" ]:
-        d = g[ g["연도"] == y ]
-        if nm != "전체":
-            d = d[ d["묶음"] == nm ]
-        X = d[ [ "개업률" ] ]
-        Y = d[ "폐업률" ]
-        model = LinearRegression()
-        model.fit( X , Y )
-        r2 = r2_score( Y , model.predict( X ) )
-        r = d[ [ "개업률" , "폐업률" ] ].corr().iloc[ 0 , 1 ]
-        t = r * np.sqrt( ( len(d) - 2 ) / ( 1 - r * r ) )
-        print( y , nm , "회귀계수" , round( model.coef_[0] , 3 ) , "R2" , round( r2 , 3 ) , "t" , round( t , 1 ) )
-
-# 가설1 그래프 1 : 연도별 개업률 vs 폐업률 산점도
-plt.figure( figsize = ( 15 , 12 ) )
-for i in range( 0 , 5 ):
+# 가설1 산점도 : 개업률 vs 폐업률 + 회귀선 (2021년, 2025년)
+pick = [ 0 , 4 ]
+line_x = pd.DataFrame( { "개업률" : [ 0 , 8 ] } )
+plt.figure( figsize = ( 14 , 6 ) )
+for k in range( 0 , 2 ):
+    i = pick[k]
     dy = g[ g["연도"] == years[i] ]
     dd = dy[ dy["묶음"] == "동네" ]
     dc = dy[ dy["묶음"] == "중심" ]
-    plt.subplot( 2 , 3 , i + 1 )
-    plt.scatter( dd["개업률"] , dd["폐업률"] , color = "red" , s = 10 , alpha = 0.4 , label = "동네 상권" )
-    plt.scatter( dc["개업률"] , dc["폐업률"] , color = "blue" , s = 10 , alpha = 0.4 , label = "중심 상권" )
-    plt.title( f"{year_str[i]}년 (전체 r = {round( r_all[i] , 2 )})" )
+    model_d = LinearRegression()
+    model_d.fit( dd[ [ "개업률" ] ] , dd[ "폐업률" ] )
+    model_c = LinearRegression()
+    model_c.fit( dc[ [ "개업률" ] ] , dc[ "폐업률" ] )
+    plt.subplot( 1 , 2 , k + 1 )
+    plt.scatter( dd["개업률"] , dd["폐업률"] , color = "red" , s = 15 , alpha = 0.3 , label = "동네 상권" )
+    plt.scatter( dc["개업률"] , dc["폐업률"] , color = "blue" , s = 15 , alpha = 0.3 , label = "중심 상권" )
+    plt.plot( [ 0 , 8 ] , model_d.predict( line_x ) , color = "darkred" , label = f"동네 회귀선 (기울기 {round( model_d.coef_[0] , 2 )})" )
+    plt.plot( [ 0 , 8 ] , model_c.predict( line_x ) , color = "navy" , label = f"중심 회귀선 (기울기 {round( model_c.coef_[0] , 2 )})" )
+    plt.title( f"가설 1. {year_str[i]}년 개업률 vs 폐업률 (전체 r = {round( r_all[i] , 2 )})" )
     plt.xlabel( "개업률(%)" )
     plt.ylabel( "폐업률(%)" )
     plt.legend()
     plt.grid()
-plt.show()
-
-# 가설1 그래프 2 : 연도별 상관계수
-plt.figure( figsize = ( 8 , 6 ) )
-plt.plot( year_str , r_all , label = "전체" , color = "gray" , marker = "o" )
-plt.plot( year_str , r_dongne , label = "동네 상권" , color = "red" , marker = "o" )
-plt.plot( year_str , r_center , label = "중심 상권" , color = "blue" , marker = "o" )
-plt.title( "가설 1. 연도별 상관계수 r (개업률 - 폐업률)" )
-plt.xlabel( "연도" )
-plt.ylabel( "상관계수 r" )
-plt.legend()
-plt.grid()
 plt.show()

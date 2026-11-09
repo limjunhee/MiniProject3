@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
 
 plt.rc( 'font' , family = 'Malgun Gothic' )
 plt.rcParams['axes.unicode_minus'] = False
@@ -99,69 +100,59 @@ print( "직장인구 비중 r :" , r_work )
 print( "낮 매출 비중 r :" , r_sales )
 print( "총유동인구 r :" , r_total )
 
-# 가설2 통계 : 변수별·연도별 회귀계수, R2, t값
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score
-import numpy as np
-
-for c in [ "낮비중" , "직장비중" , "낮매출비중" , "총유동인구" ]:
-    for y in years:
-        d = m[ m["연도"] == y ]
-        X = d[ [ c ] ]
-        Y = d[ "폐업률" ]
-        model = LinearRegression()
-        model.fit( X , Y )
-        r2 = r2_score( Y , model.predict( X ) )
-        r = d[ [ c , "폐업률" ] ].corr().iloc[ 0 , 1 ]
-        t = r * np.sqrt( ( len(d) - 2 ) / ( 1 - r * r ) )
-        print( c , y , "회귀계수" , round( model.coef_[0] , 4 ) , "R2" , round( r2 , 3 ) , "t" , round( t , 1 ) )
-
-# 가설2 그래프 1 : 연도별 낮 유동인구 비중 vs 폐업률 산점도
-plt.figure( figsize = ( 15 , 12 ) )
-for i in range( 0 , 5 ):
+# 가설2 산점도 1 : 낮 유동인구 비중 vs 폐업률 + 회귀선 (2021년, 2025년)
+pick = [ 0 , 4 ]
+line_x = pd.DataFrame( { "낮비중" : [ 30 , 80 ] } )
+plt.figure( figsize = ( 14 , 6 ) )
+for k in range( 0 , 2 ):
+    i = pick[k]
     dy = m[ m["연도"] == years[i] ]
-    plt.subplot( 2 , 3 , i + 1 )
-    plt.scatter( dy["낮비중"] , dy["폐업률"] , color = "purple" , s = 10 , alpha = 0.4 )
-    plt.title( f"{year_str[i]}년 (r = {round( r_day[i] , 2 )})" )
+    model = LinearRegression()
+    model.fit( dy[ [ "낮비중" ] ] , dy[ "폐업률" ] )
+    plt.subplot( 1 , 2 , k + 1 )
+    plt.scatter( dy["낮비중"] , dy["폐업률"] , color = "purple" , s = 10 , alpha = 0.3 )
+    plt.plot( [ 30 , 80 ] , model.predict( line_x ) , color = "red" , label = f"회귀선 (기울기 {round( model.coef_[0] , 3 )})" )
+    plt.title( f"가설 2. {year_str[i]}년 낮 유동인구 비중 vs 폐업률 (r = {round( r_day[i] , 2 )})" )
     plt.xlabel( "낮(06~17시) 유동인구 비중(%)" )
     plt.ylabel( "폐업률(%)" )
+    plt.legend()
     plt.grid()
 plt.show()
 
-# 가설2 그래프 2 : 연도별 직장인구 비중 vs 폐업률 산점도
-plt.figure( figsize = ( 15 , 12 ) )
-for i in range( 0 , 5 ):
+# 가설2 산점도 2 : 직장인구 비중 vs 폐업률 + 회귀선 (2021년, 2025년)
+pick = [ 0 , 4 ]
+line_x = pd.DataFrame( { "직장비중" : [ 0 , 100 ] } )
+plt.figure( figsize = ( 14 , 6 ) )
+for k in range( 0 , 2 ):
+    i = pick[k]
     dy = m[ m["연도"] == years[i] ]
-    plt.subplot( 2 , 3 , i + 1 )
-    plt.scatter( dy["직장비중"] , dy["폐업률"] , color = "green" , s = 10 , alpha = 0.4 )
-    plt.title( f"{year_str[i]}년 (r = {round( r_work[i] , 2 )})" )
+    model = LinearRegression()
+    model.fit( dy[ [ "직장비중" ] ] , dy[ "폐업률" ] )
+    plt.subplot( 1 , 2 , k + 1 )
+    plt.scatter( dy["직장비중"] , dy["폐업률"] , color = "green" , s = 10 , alpha = 0.3 )
+    plt.plot( [ 0 , 100 ] , model.predict( line_x ) , color = "red" , label = f"회귀선 (기울기 {round( model.coef_[0] , 3 )})" )
+    plt.title( f"가설 2. {year_str[i]}년 직장인구 비중 vs 폐업률 (r = {round( r_work[i] , 2 )})" )
     plt.xlabel( "직장인구 비중(%)" )
     plt.ylabel( "폐업률(%)" )
+    plt.legend()
     plt.grid()
 plt.show()
 
-# 가설2 그래프 3 : 연도별 낮 매출 비중 vs 폐업률 산점도
-plt.figure( figsize = ( 15 , 12 ) )
-for i in range( 0 , 5 ):
+# 가설2 산점도 3 : 낮 매출 비중 vs 폐업률 + 회귀선 (2021년, 2025년)
+pick = [ 0 , 4 ]
+line_x = pd.DataFrame( { "낮매출비중" : [ 0 , 100 ] } )
+plt.figure( figsize = ( 14 , 6 ) )
+for k in range( 0 , 2 ):
+    i = pick[k]
     dy = m[ m["연도"] == years[i] ]
-    plt.subplot( 2 , 3 , i + 1 )
-    plt.scatter( dy["낮매출비중"] , dy["폐업률"] , color = "orange" , s = 10 , alpha = 0.4 )
-    plt.title( f"{year_str[i]}년 (r = {round( r_sales[i] , 2 )})" )
+    model = LinearRegression()
+    model.fit( dy[ [ "낮매출비중" ] ] , dy[ "폐업률" ] )
+    plt.subplot( 1 , 2 , k + 1 )
+    plt.scatter( dy["낮매출비중"] , dy["폐업률"] , color = "orange" , s = 10 , alpha = 0.3 )
+    plt.plot( [ 0 , 100 ] , model.predict( line_x ) , color = "red" , label = f"회귀선 (기울기 {round( model.coef_[0] , 3 )})" )
+    plt.title( f"가설 2. {year_str[i]}년 낮 매출 비중 vs 폐업률 (r = {round( r_sales[i] , 2 )})" )
     plt.xlabel( "낮(06~17시) 매출 비중(%)" )
     plt.ylabel( "폐업률(%)" )
+    plt.legend()
     plt.grid()
-plt.show()
-
-# 가설2 그래프 4 : 연도별 상관계수
-plt.figure( figsize = ( 8 , 6 ) )
-plt.plot( year_str , r_day , label = "낮 유동인구 비중" , color = "purple" , marker = "o" )
-plt.plot( year_str , r_work , label = "직장인구 비중" , color = "green" , marker = "o" )
-plt.plot( year_str , r_sales , label = "낮 매출 비중" , color = "orange" , marker = "o" )
-plt.plot( year_str , r_total , label = "총유동인구(대조)" , color = "gray" , linestyle = "--" , marker = "o" )
-plt.plot( year_str , [ 0 , 0 , 0 , 0 , 0 ] , color = "black" )
-plt.title( "가설 2. 연도별 상관계수 r (각 변수 - 폐업률)" )
-plt.xlabel( "연도" )
-plt.ylabel( "상관계수 r" )
-plt.legend()
-plt.grid()
 plt.show()
