@@ -2,8 +2,10 @@
 #  (1) 연도별로 '폐업'이 언급된 기사 비율 -> 선 그래프
 #  (2) '폐업'이 언급된 기사들의 연도별 상위 키워드 (kiwi) -> 가로 막대그래프
 #  (3) 주요 키워드가 연도별로 얼마나 등장했는지 흐름 -> 선 그래프
+#  (4) '폐업'이 들어간 문장만 뽑아서, 정책(지원금 등) 언급 / 증가 표현 비율 -> 선 그래프 + 예시 문장
 # 입력: ./limjunhee/Crawling_CSV/자영업기사_본문_2021~2025.csv (selfemp_2_body.py 결과)
 # 설치: pip install kiwipiepy
+import re
 import pandas as pd
 import matplotlib.pyplot as plt
 from kiwipiepy import Kiwi
@@ -129,6 +131,56 @@ plt.title("'폐업' 언급 기사 속 주요 키워드 등장 비율 (중앙일�
 plt.xlabel('연도')
 plt.ylabel('등장 기사 비율 (%)')
 plt.ylim(0, 100)
+plt.legend()
+plt.grid(axis='y', alpha=0.3)
+plt.show()
+
+
+# ===== (4) '폐업' 문장 분석: 정책 언급 vs 증가 표현 =====
+# 기사 전체가 아니라 '폐업'이 들어간 문장만 보고, 그 문장이 무슨 이야기를 하는지 확인
+#  - 정책 언급: 폐업을 말하면서 지원 정책(손실보상, 지원금, 대출 만기연장 등)을 같이 말한 문장
+#  - 증가 표현: 폐업이 늘었다/최대다 라고 말한 문장
+# ※ 뉴스 속 표현을 세는 것이지, 실제 폐업률 수치를 확인하는 것은 아님
+policy = '손실보상|지원금|만기 ?연장|상환 ?유예|희망회복'
+increase = '급증|증가|늘어|늘었|최대|최고|역대'
+
+rows = []
+for _, row in closing.iterrows():
+    # 마침표·물음표·느낌표 뒤에 띄어쓰기가 오면 문장이 끝난 것으로 보고 나누기 ('3.5%' 같은 숫자는 안 나눠짐)
+    for sentence in re.split(r'(?<=[.?!])\s+', row['글']):
+        if '폐업' in sentence:
+            rows.append({'날짜': row['날짜'], '연도': row['연도'], '제목': row['제목'], '문장': sentence})
+sentences = pd.DataFrame(rows)
+sentences['정책언급'] = sentences['문장'].str.contains(policy)
+sentences['증가표현'] = sentences['문장'].str.contains(increase)
+
+sent_ratio = sentences.groupby('연도').agg(폐업문장수=('문장', 'size'),
+                                          정책언급문장수=('정책언급', 'sum'),
+                                          증가표현문장수=('증가표현', 'sum'))
+sent_ratio['정책언급비율(%)'] = (sent_ratio['정책언급문장수'] / sent_ratio['폐업문장수'] * 100).round(1)
+sent_ratio['증가표현비율(%)'] = (sent_ratio['증가표현문장수'] / sent_ratio['폐업문장수'] * 100).round(1)
+print(sent_ratio)
+sent_ratio.to_csv('./limjunhee/Crawling_CSV/연도별_폐업문장분석.csv', encoding='utf-8-sig')
+sentences.to_csv('./limjunhee/Crawling_CSV/폐업문장_목록.csv', index=False, encoding='utf-8-sig')   # 문장 전체 (직접 읽어보기용)
+
+# 예시 문장 확인: 2022년 정책 언급 문장, 2023년 증가 표현 문장
+for year, col in [('2022', '정책언급'), ('2023', '증가표현')]:
+    sample = sentences[(sentences['연도'].astype(str) == year) & sentences[col]]
+    print(f'\n[{year}년 {col} 문장 {len(sample)}건 중 5건]')
+    for _, row in sample.head(5).iterrows():
+        print(row['날짜'], '|', row['문장'][:120])
+
+plt.figure(figsize=(8, 5))
+plt.plot(sent_ratio.index.astype(str), sent_ratio['정책언급비율(%)'], marker='o', label='정책 언급 (손실보상·지원금 등)')
+plt.plot(sent_ratio.index.astype(str), sent_ratio['증가표현비율(%)'], marker='o', label='증가 표현 (급증·늘었다·역대 등)')
+for x, y in zip(sent_ratio.index.astype(str), sent_ratio['정책언급비율(%)']):
+    plt.text(x, y + 1, f'{y}%', ha='center', fontsize=9)
+for x, y in zip(sent_ratio.index.astype(str), sent_ratio['증가표현비율(%)']):
+    plt.text(x, y + 1, f'{y}%', ha='center', fontsize=9)
+plt.title("'폐업'이 들어간 문장 중 정책 언급 / 증가 표현 비율 (중앙일보 자영업 기사)")
+plt.xlabel('연도')
+plt.ylabel('폐업 문장 중 비율 (%)')
+plt.ylim(0, 40)
 plt.legend()
 plt.grid(axis='y', alpha=0.3)
 plt.show()
