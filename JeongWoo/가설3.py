@@ -114,7 +114,7 @@ for ax, year in zip(axes.flat, range(2021, 2026)):
 axes[1, 2].axis('off')
 from matplotlib.lines import Line2D
 axes[1, 2].legend(handles=[
-    Line2D([0], [0], color='#26779B', marker='o', label='전통시장 내 비프랜차이즈'),
+    Line2D([0], [0], color='#26779B', marker='o', label='전통시장 '),
     Line2D([0], [0], color='#D77839', marker='o', label='전체 상권 프랜차이즈')
 ], loc='center', frameon=False, fontsize=12)
 fig.suptitle('연도별 유동인구와 점포 규모 | 2021~2025년', fontsize=20, y=.99)
